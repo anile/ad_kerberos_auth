@@ -5,7 +5,7 @@ var router = express.Router();
 app.get('/', function (req, res) {
 
     //
-    console.log('==========REQUEST====================');
+    console.log('-----request-----');
     console.log(req.headers);
 
 
@@ -13,41 +13,60 @@ app.get('/', function (req, res) {
         res.set( 'WWW-Authenticate', 'Negotiate' );
 
         //
-        console.log('==========RESPONSE====================');
+        console.log('-----response-----');
         console.log(res._headers);
 
         res.status(401).send();
 
     } else {
 
-        // get token from kerberos as example
-        // but it is not associated with the token from the browser
-        var Kerberos = require('kerberos').Kerberos;
-        var kerberos = new Kerberos();
-        var Ssip = require('kerberos').SSIP;
+        // this code is only for Linux !
 
-        Ssip.SecurityCredentials.acquire("Kerberos", "", function(err, security_credentials) {
-            if(err) throw err;
+        var KerberosNative = require('kerberos').Kerberos;
+        var kerberos = new KerberosNative();
+        var ActiveDirectory = require('activedirectory');
+        var ad = new ActiveDirectory({
+            "url": "ldap://<example.com>",
+            "baseDN": "<dc=example,dc=com>",
+            "username": "<username@example.com>",
+            "password": "<password>"});
+        //cut phrase "Negotiate "
+        var ticket = req.headers.authorization.substring(10);
 
-            Ssip.SecurityContext.initialize(security_credentials, "HTTP/<<www.foo.bar.ru@FOO.BAR.RU>>", "", function(err, security_context) {
-                if(err) throw err;
+        //init context
+        kerberos.authGSSServerInit("HTTP", function(err, context) {
+            //check ticket
+            kerberos.authGSSServerStep(context, ticket, function(err) {
+                //in success context contains username
+                ad.findUser(context.username, function(err, user) {
+                    //get user groups
+                    //if need filter by group name
+                    // var opts = {filter: '&(member:1.2.840.113556.1.4.1941:=' + user.dn + ')(sAMAccountName=Ex*)'};
+                    var opts = {filter: '&(member:1.2.840.113556.1.4.1941:=' + user.dn + ')'};
+                    ad.find(opts, function(err, result) {
+                        res.set( 'WWW-Authenticate', 'Negotiate ' + context.response);
 
-                var has_context = security_context.hasContext;
-                var payload = security_context.payload;
+                        //
+                        console.log('-----response-----');
+                        console.log(res._headers);
 
-                res.set('WWW-Authenticate','Negotiate ' + payload);
-
-                //
-                console.log('==========RESPONSE====================');
-                console.log(res._headers);
-
-                res.send('<p style="word-wrap: break-word;">ok</p>');
+                        var response = '<p>Имя пользователя: '+ user.cn + '</p><p>Состоит в группах:</p><ul>';
+                        for (var i in result.groups) {response += '<li>' + result.groups[i].cn + '</li>';}
+                        res.send(response);
+                    })
+                });
             });
         });
+
+        // this code is for Windows - yet not working
+
+        //var Ssip = require('kerberos').SSIP;
+        //var ticket = req.headers.authorization.substring(10);
+
     }
 });
 
 
 module.exports = router;
 app.use(router);
-app.listen(3000);
+app.listen(5000);

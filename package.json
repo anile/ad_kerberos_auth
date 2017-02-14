@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.14.0",
-    "kerberos": "0.0.22"
+    "kerberos": "0.0.22",
+    "activedirectory": "^0.7.2"
   }
 }
