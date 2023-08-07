@@ -1,6 +1,6 @@
 # ad_kerberos_auth
-https://habr.com/ru/articles/321962/  
-example of authorization in AD via kerberos (SSO or login/pass)
+example of authorization in AD via kerberos (SSO or login/pass)  
+https://habr.com/ru/articles/321962/
 
 ## install & start
 ```
